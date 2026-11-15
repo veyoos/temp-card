@@ -21,8 +21,19 @@ class PersistentSessions implements SessionHandlerInterface {
     public function gc(int $max_lifetime): int|false { return 0; }
 }
 function start_app_session(PDO $db): void {
-    session_set_save_handler(new PersistentSessions($db), true);
-    session_start();
+    static $started = false;
+    if ($started) return;
+    // Some hosts or an older config.php start PHP's default session before this point.
+    // Close it before switching handlers; never carry unauthenticated legacy state across.
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+        $_SESSION = [];
+    }
+    session_set_cookie_params(['httponly'=>true, 'samesite'=>'Lax', 'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+    if (!session_set_save_handler(new PersistentSessions($db), true) || !session_start()) {
+        throw new RuntimeException('شروع نشست ناموفق بود.');
+    }
+    $started = true;
     if (isset($_SESSION['user']) && in_array($_SESSION['user']['role'], ['user','operator'], true)) remember_session();
 }
 function remember_session(): void {
@@ -42,6 +53,28 @@ function jalali_to_gregorian($jy,$jm,$jd): array { $jy+=1595; $days=-355668+365*
 function jalali($date): string { if (!$date) return '—'; $t=strtotime($date); if (!$t) return '—'; return sprintf('%04d/%02d/%02d', ...gregorian_to_jalali((int)date('Y',$t),(int)date('n',$t),(int)date('j',$t))); }
 function parse_jalali($input): ?string { $s=digits($input); if(!preg_match('~^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$~',$s,$m)) return null; $y=(int)$m[1];$mo=(int)$m[2];$d=(int)$m[3]; if($y<1300||$y>1500||$mo<1||$mo>12||$d<1||$d>31)return null; [$gy,$gm,$gd]=jalali_to_gregorian($y,$mo,$d); if(!checkdate($gm,$gd,$gy)||gregorian_to_jalali($gy,$gm,$gd)!==[$y,$mo,$d])return null; return sprintf('%04d-%02d-%02d',$gy,$gm,$gd); }
 function card_status($c): array { $today=date('Y-m-d'); if(!$c['is_active']) return ['غیرفعال', 'danger', $c['disabled_reason'] ? 'کارت غیرفعال شده است: '.$c['disabled_reason'] : 'این کارت غیرفعال شده است.']; if($today<$c['start_date'])return ['هنوز معتبر نیست','warning','تاریخ مجاز این کارت هنوز آغاز نشده است.']; if($today>$c['end_date'])return ['منقضی شده','danger','تاریخ کارت موقت شما به اتمام رسیده است.']; return ['مجاز','success','این کارت در بازه مجاز قرار دارد.']; }
-function barcode_svg($value): string { $map=['0'=>'nnnwwnwnn','1'=>'wnnwnnnnw','2'=>'nnwwnnnnw','3'=>'wnwwnnnnn','4'=>'nnnwwnnnw','5'=>'wnnwwnnnn','6'=>'nnwwwnnnn','7'=>'nnnwnnwnw','8'=>'wnnwnnwnn','9'=>'nnwwnnwnn','A'=>'wnnnnwnnw','B'=>'nnwnnwnnw','C'=>'wnwnnwnnn','D'=>'nnnnwwnnw','E'=>'wnnnwwnnn','F'=>'nnwnwwnnn','*'=>'nwnnwnwnn']; $x=10;$bars=''; foreach(str_split('*'.$value.'*') as $ch){ $pattern=$map[$ch]??$map['0']; foreach(str_split($pattern) as $i=>$w){$width=$w==='w'?3:1;if($i%2===0)$bars.='<rect x="'.$x.'" y="0" width="'.$width.'" height="35"/>'; $x+=$width;} $x++; } return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.($x+10).' 35" preserveAspectRatio="none" aria-label="'.e($value).'">'.$bars.'</svg>'; }
+// Code 128 C encodes pairs of digits compactly; Code 128 B preserves older alphanumeric card IDs.
+function barcode_svg($value): string {
+    $value=(string)$value;
+    if ($value === '' || !preg_match('/^[\x20-\x7E]+$/D', $value)) throw new InvalidArgumentException('Invalid barcode value');
+    $patterns=['11011001100','11001101100','11001100110','10010011000','10010001100','10001001100','10011001000','10011000100','10001100100','11001001000','11001000100','11000100100','10110011100','10011011100','10011001110','10111001100','10011101100','10011100110','11001110010','11001011100','11001001110','11011100100','11001110100','11101101110','11101001100','11100101100','11100100110','11101100100','11100110100','11100110010','11011011000','11011000110','11000110110','10100011000','10001011000','10001000110','10110001000','10001101000','10001100010','11010001000','11000101000','11000100010','10110111000','10110001110','10001101110','10111011000','10111000110','10001110110','11101110110','11010001110','11000101110','11011101000','11011100010','11011101110','11101011000','11101000110','11100010110','11101101000','11101100010','11100011010','11101111010','11001000010','11110001010','10100110000','10100001100','10010110000','10010000110','10000101100','10000100110','10110010000','10110000100','10011010000','10011000010','10000110100','10000110010','11000010010','11001010000','11110111010','11000010100','10001111010','10100111100','10010111100','10010011110','10111100100','10011110100','10011110010','11110100100','11110010100','11110010010','11011011110','11011110110','11110110110','10101111000','10100011110','10001011110','10111101000','10111100010','11110101000','11110100010','10111011110','10111101110','11101011110','11110101110','11010000100','11010010000','11010011100'];
+    $numeric=preg_match('/^[0-9]+$/D',$value) && strlen($value)%2===0;
+    $codes=[$numeric ? 105 : 104];
+    if ($numeric) { foreach (str_split($value,2) as $pair) $codes[]=(int)$pair; }
+    else { foreach (str_split($value) as $char) $codes[]=ord($char)-32; }
+    $checksum=$codes[0];
+    for($i=1;$i<count($codes);$i++) $checksum += $codes[$i]*$i;
+    $codes[]=$checksum%103;
+    $bits=str_repeat('0',10);
+    foreach($codes as $code) $bits.=$patterns[$code];
+    $bits.='1100011101011'.str_repeat('0',10);
+    $bars='';$len=strlen($bits);
+    for($i=0;$i<$len;) {
+        if($bits[$i]==='0') { $i++; continue; }
+        $start=$i; while($i<$len && $bits[$i]==='1') $i++;
+        $bars.='<rect x="'.$start.'" y="0" width="'.($i-$start).'" height="50"/>';
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$len.' 50" preserveAspectRatio="none" role="img" aria-label="'.e($value).'" shape-rendering="crispEdges"><rect width="'.$len.'" height="50" fill="white"/><g fill="black">'.$bars.'</g></svg>';
+}
 function photo_upload($existing=''): string { if(empty($_FILES['photo']['name'])) { if($existing && is_file(__DIR__.'/uploads/'.basename($existing)))return $existing; throw new Exception('عکس پرسنلی را انتخاب کنید.'); } $f=$_FILES['photo']; if($f['error']!==UPLOAD_ERR_OK || $f['size']>3*1024*1024)throw new Exception('حجم عکس باید کمتر از ۳ مگابایت باشد.'); $type=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']); $ext=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$type]??null; if(!$ext || !getimagesize($f['tmp_name']))throw new Exception('فقط عکس JPG، PNG یا WebP مجاز است.'); $name=bin2hex(random_bytes(16)).'.'.$ext; if(!move_uploaded_file($f['tmp_name'],__DIR__.'/uploads/'.$name))throw new Exception('ذخیره عکس ناموفق بود.'); return $name; }
 function mb_substr_fallback($s): string { return function_exists('mb_substr') ? mb_substr($s,0,1,'UTF-8') : (preg_match('/^./us',$s,$m)?$m[0]:'U'); }

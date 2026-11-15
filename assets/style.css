@@ -14,3 +14,12 @@
 .physical-card .barcode{width:4.45cm;padding:2px 4px 1px;background:#fff}
 .physical-card .barcode svg{height:.72cm}
 .physical-card .barcode small{font-size:8px;line-height:1}
+/* The supplied header is used as one image, without reflowing its contents. */
+.physical-card .card-top-image{display:block;width:100%;height:auto}
+.physical-card .card-title{position:relative;top:auto;right:auto;left:auto;width:62%;height:.45cm;line-height:.43cm;margin:0 auto;font-size:12px}
+.physical-card .card-body{padding:3px 9px 0}
+.physical-card .card-photo{height:1.9cm}
+.physical-card .card-fields div{padding:2px 4px}
+.physical-card .barcode{width:4.5cm;padding:0;background:#fff}
+.physical-card .barcode svg{width:100%;height:.8cm}
+.physical-card .barcode small{display:block;line-height:1.1}

@@ -5,5 +5,7 @@ const DB_NAME = 'temp_card';
 const DB_USER = 'root';
 const DB_PASS = '';
 date_default_timezone_set('Asia/Tehran');
-session_set_cookie_params(['httponly'=>true, 'samesite'=>'Lax', 'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params(['httponly'=>true, 'samesite'=>'Lax', 'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+}
 
