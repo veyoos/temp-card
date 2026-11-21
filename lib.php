@@ -74,7 +74,7 @@ function barcode_svg($value): string {
         $start=$i; while($i<$len && $bits[$i]==='1') $i++;
         $bars.='<rect x="'.$start.'" y="0" width="'.($i-$start).'" height="50"/>';
     }
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$len.' 50" preserveAspectRatio="none" role="img" aria-label="'.e($value).'" shape-rendering="crispEdges"><rect width="'.$len.'" height="50" fill="white"/><g fill="black">'.$bars.'</g></svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$len.' 50" preserveAspectRatio="none" role="img" aria-label="'.e($value).'" shape-rendering="crispEdges"><rect width="'.$len.'" height="50" fill="#eff5fe"/><g fill="black">'.$bars.'</g></svg>';
 }
 function photo_upload($existing=''): string { if(empty($_FILES['photo']['name'])) { if($existing && is_file(__DIR__.'/uploads/'.basename($existing)))return $existing; throw new Exception('عکس پرسنلی را انتخاب کنید.'); } $f=$_FILES['photo']; if($f['error']!==UPLOAD_ERR_OK || $f['size']>3*1024*1024)throw new Exception('حجم عکس باید کمتر از ۳ مگابایت باشد.'); $type=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']); $ext=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$type]??null; if(!$ext || !getimagesize($f['tmp_name']))throw new Exception('فقط عکس JPG، PNG یا WebP مجاز است.'); $name=bin2hex(random_bytes(16)).'.'.$ext; if(!move_uploaded_file($f['tmp_name'],__DIR__.'/uploads/'.$name))throw new Exception('ذخیره عکس ناموفق بود.'); return $name; }
 function mb_substr_fallback($s): string { return function_exists('mb_substr') ? mb_substr($s,0,1,'UTF-8') : (preg_match('/^./us',$s,$m)?$m[0]:'U'); }
