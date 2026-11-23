@@ -29,3 +29,4 @@
 .button.excel{background:#d9f4e5;color:#176c46;box-shadow:5px 5px 12px #d0e5d9,-5px -5px 12px #fff}
 .button.excel:hover{background:#c4edd5}
 .report-actions{grid-column:1/-1;flex-wrap:wrap}
+.reference-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #dce5ef;flex-wrap:wrap}.reference-edit{display:flex;align-items:center;gap:10px;flex:1;min-width:220px}.reference-edit input{margin:0}.reference-row form{margin:0}
