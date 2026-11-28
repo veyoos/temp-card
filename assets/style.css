@@ -33,3 +33,13 @@
 .change-password-link{display:inline-flex;align-items:center;white-space:nowrap;padding:8px 10px;border-radius:9px;color:#426dba;background:#e7eef9;font-size:12px;font-weight:700}
 .change-password-link:hover{background:#dce8fa}
 @media(max-width:700px){.top-actions{gap:5px}.topbar{padding:0 10px}.change-password-link{font-size:10px;padding:7px 6px}.today{padding:8px;font-size:10px}.role-avatar{width:32px;height:32px}}
+/* Keep long access-area text and the barcode in normal flow so they cannot overlap. */
+.physical-card{height:auto;min-height:6.5cm;display:flex;flex-direction:column}
+.physical-card .card-body{min-width:0}
+.physical-card .card-fields{min-width:0;align-content:start}
+.physical-card .card-fields .wide{white-space:normal;overflow:visible;overflow-wrap:anywhere}
+.physical-card .card-bottom{position:static;margin:auto 10px 5px;padding-top:8px}
+.top-actions .today,.top-actions .change-password-link{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:120px;height:38px;padding:0 6px;font-size:12px;white-space:nowrap}
+.date-presets{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#526782;font-size:12px}
+.date-presets .button{padding:8px 13px}.date-presets small{color:#7289a7}
+@media(max-width:700px){.top-actions .today,.top-actions .change-password-link{width:98px;height:34px;font-size:10px}.breadcrumb{display:none}}
