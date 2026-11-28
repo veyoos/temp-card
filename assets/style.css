@@ -30,3 +30,6 @@
 .button.excel:hover{background:#c4edd5}
 .report-actions{grid-column:1/-1;flex-wrap:wrap}
 .reference-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #dce5ef;flex-wrap:wrap}.reference-edit{display:flex;align-items:center;gap:10px;flex:1;min-width:220px}.reference-edit input{margin:0}.reference-row form{margin:0}
+.change-password-link{display:inline-flex;align-items:center;white-space:nowrap;padding:8px 10px;border-radius:9px;color:#426dba;background:#e7eef9;font-size:12px;font-weight:700}
+.change-password-link:hover{background:#dce8fa}
+@media(max-width:700px){.top-actions{gap:5px}.topbar{padding:0 10px}.change-password-link{font-size:10px;padding:7px 6px}.today{padding:8px;font-size:10px}.role-avatar{width:32px;height:32px}}
