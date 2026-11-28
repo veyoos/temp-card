@@ -36,11 +36,45 @@
     if (j[0] > 1500) return null;
     return String(j[0]).padStart(4,'0') + '/' + String(j[1]).padStart(2,'0') + '/' + String(j[2]).padStart(2,'0');
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = {addJalaliDays};
+  function endOfJalaliMonth(y, m) {
+    if (!Number.isInteger(y) || !Number.isInteger(m) || y < 1300 || y > 1500 || m < 1 || m > 12) return null;
+    let last = m <= 6 ? 31 : 30;
+    if (m === 12) {
+      const date = toJalali(...toGregorian(y, m, 30));
+      if (date[0] !== y || date[1] !== m || date[2] !== 30) last = 29;
+    }
+    return `${String(y).padStart(4,'0')}/${String(m).padStart(2,'0')}/${last}`;
+  }
+  function tehranJalali(timestamp) {
+    const formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {timeZone: 'Asia/Tehran', year:'numeric', month:'numeric', day:'numeric'});
+    const parts = {};
+    formatter.formatToParts(new Date(timestamp)).forEach(part => { if (['year','month','day'].includes(part.type)) parts[part.type] = Number(part.value); });
+    return toJalali(parts.year, parts.month, parts.day);
+  }
+  if (typeof module !== 'undefined' && module.exports) module.exports = {addJalaliDays, endOfJalaliMonth, tehranJalali};
   if (!root.document) return;
   const form = root.document.querySelector('.form-panel form[enctype="multipart/form-data"]');
   if (!form) return;
   const start = form.elements.namedItem('start_date'), end = form.elements.namedItem('end_date'), message = root.document.getElementById('date-preset-message');
+  const monthButton = form.querySelector('[data-end-current-month]');
+  if (monthButton) {
+    const serverTime = Number(monthButton.dataset.serverTime) * 1000;
+    const openedAt = Date.now();
+    monthButton.addEventListener('click', () => {
+      try {
+        const [year, month] = tehranJalali(serverTime + (Date.now() - openedAt));
+        const result = endOfJalaliMonth(year, month);
+        if (!result) throw new Error('Invalid current date');
+        end.value = result;
+        end.dispatchEvent(new Event('input', {bubbles: true}));
+        end.dispatchEvent(new Event('change', {bubbles: true}));
+        const startDate = addJalaliDays(start.value, 0);
+        message.textContent = startDate && startDate > result
+          ? 'تاریخ شروع بعد از پایان ماه جاری است؛ تاریخ شروع را اصلاح کنید.'
+          : 'تاریخ پایان روی آخرین روز ماه جاری تنظیم شد.';
+      } catch (_) { message.textContent = 'محاسبه پایان ماه جاری ممکن نیست؛ تاریخ را دستی وارد کنید.'; }
+    });
+  }
   form.querySelectorAll('[data-add-days]').forEach(button => button.addEventListener('click', () => {
     const result = addJalaliDays(start.value, Number(button.dataset.addDays));
     if (!result) { message.textContent = 'ابتدا تاریخ شروع شمسی معتبر وارد کنید.'; start.focus(); return; }
